@@ -1,0 +1,125 @@
+{
+  "style_info": {
+    "name": "Default",
+    "bg": "#1a1a1a",
+    "name_box": {
+      "bg": "#282828",
+      "name": {
+        "fg": "#5a5a5a",
+        "font": ["Segoe UI", 18, "bold"]
+      }
+    },
+    "author": {
+      "title": "Blogerhelp",
+      "styles": { "fg": "#e2e2e2", "font": ["Segoe UI", 11, "bold"] }
+    },
+    "description": {
+      "title": "This is the program's default style",
+      "styles": { "fg": "#e2e2e2", "font": ["Segoe UI", 10] }
+    },
+    "hover_effect": {
+      "on_enter": {
+        "card": { "bg": "#262626", "highlightbackground": "#444444" },
+        "preview": { "bg": "#333333" },
+        "info": { "bg": "#262626" },
+        "title": { "bg": "#262626", "fg": "#ffffff" },
+        "time": { "bg": "#262626" },
+        "fmt": { "bg": "#333333" }
+      }
+    }
+  },
+  "window_color": "#1e1e1e",
+  "main_interface": {
+    "init_styles": {
+      "Nav-TFrame": "#141414",
+      "UP-TFrame": "#383838",
+      "Vertical-TScrollbar": {
+        "gripcount": 0,
+        "background": "#383838",
+        "darkcolor": "#2E2E2E",
+        "lightcolor": "#424242",
+        "troughcolor": "#F5F5F5",
+        "bordercolor": "#D3D3D3",
+        "arrowcolor": "white"
+      },
+      "NavFocus-TButton": {
+        "font": ["Segoe UI", 11, "bold"],
+        "foreground": "#ffffff",
+        "borderwidth": 0.5,
+        "focuscolor": "#141414"
+      },
+      "NavFocusOut-TButton": {
+        "font": ["Segoe UI", 11, "bold"],
+        "foreground": "#ffffff",
+        "borderwidth": 0,
+        "focuscolor": "#141414"
+      },
+      "ActionOpen-TButton": {
+        "font": ["Segoe UI", 11, "bold"],
+        "background": "#1473e6",
+        "foreground": "#ffffff",
+        "borderwidth": 0,
+        "focuscolor": "#1473e6"
+      },
+      "ActionCreate-TButton": {
+        "font": ["Segoe UI", 11, "bold"],
+        "background": "#373737",
+        "foreground": "#ffffff",
+        "borderwidth": 0,
+        "focuscolor": "#373737"
+      },
+      "active": {
+        "Vertical-TScrollbar": "#5C5C5C",
+        "NavFocusOut-TButton": "#474747",
+        "ActionOpen-TButton": "#105cb8",
+        "ActionCreate-TButton": "#474747"
+      }
+    },
+    "create_widgets": {
+      "welcome_label": "#ADADAD",
+      "search_entry": {
+        "bg": "#2b2b2b",
+        "fg": "#ffffff",
+        "insertbackground": "white",
+        "bd": 0,
+        "highlightthickness": 1,
+        "highlightbackground": "#3e3e3e",
+        "highlightcolor": "#1473e6",
+        "font": ["Segoe UI", 11],
+        "width": 30
+      },
+      "recent_label": {
+        "fg": "#CECECE",
+        "font": ["Segoe UI", 20, "bold"]
+      },
+      "main_space": {
+        "card": {
+          "cardFrame": {
+            "bg": "#1a1a1a",
+            "highlightthickness": 1,
+            "highlightbackground": "#2d2d2d"
+          },
+          "preview_box": {
+            "bg": "#282828",
+            "fmt_label": {
+              "fg": "#5a5a5a",
+              "font": ["Segoe UI", 18, "bold"]
+            }
+          },
+          "lbl_name": { "fg": "#e2e2e2", "font": ["Segoe UI", 11, "bold"] },
+          "lbl_time": { "fg": "#7a7a7a", "font": ["Segoe UI", 10] },
+          "hover_effect": {
+            "on_enter": {
+              "card": { "bg": "#262626", "highlightbackground": "#444444" },
+              "preview": { "bg": "#333333" },
+              "info": { "bg": "#262626" },
+              "title": { "bg": "#262626", "fg": "#ffffff" },
+              "time": { "bg": "#262626" },
+              "fmt": { "bg": "#333333" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
