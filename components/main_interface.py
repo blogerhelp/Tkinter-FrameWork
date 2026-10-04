@@ -1,32 +1,45 @@
-from tkinter import ttk
-from tkinter import *
-from tkinter import messagebox
-import os
 import json
-import sys
+import os
 from pathlib import Path
-from PIL import Image, ImageTk
 import subprocess
+import sys
+from tkinter import *
+from tkinter import messagebox, ttk
+from PIL import Image, ImageTk
+from sections import Section
 from temp import Temp
 
 
 class AdobeHomeApp(Tk):
+
     def __init__(self):
         super().__init__()
+        self.last_cols = None
+        self._resize_job = None
         current_dir = Path(__file__).resolve().parent.parent
         json_path = current_dir / "data" / "temp.json"
-        style_file_loader = Temp(json_path)
-        style_file = style_file_loader.get("loaded_json/style")
+        if not json_path.exists():
+            json_path = current_dir / "data" / "Temp.json"
+
+        temp_loader = Temp(json_path)
+
+        style_file = temp_loader.get("loaded_json/style", "default.json")
         style_path = current_dir / "assets" / "styles" / f"{style_file}"
         self.styles = Temp(style_path)
+        self.files_style = temp_loader.get("loaded_json/style_files")
 
         # Настройка окна (сделали базовый размер больше)
-        self.title("Tkinter Frame Work")
+        self.title("Tkinter FrameWork")
         self.geometry("1200x800")
         self.minimum_size = (800, 600)
         self.wm_minsize(*self.minimum_size)
-        self.configure(bg=self.styles.get("window_color"))
-        self.iconbitmap("assets/system/icon/favicon.ico")
+        self.configure(bg=self.styles.get("window_color", "#1e1e1e"))
+
+        try:
+            self.iconbitmap("assets/system/icon/favicon.ico")
+        except Exception:
+            pass
+
         self.tk.call("tk", "scaling", 3.0)
 
         # Исправление размытия на Windows (High DPI)
@@ -37,7 +50,13 @@ class AdobeHomeApp(Tk):
         except Exception:
             pass
 
+        # Переменные
+        self.section = Section()
+        self.widgets_on_screen = []
+        self.current_section = "home"
+
         self.state("zoomed")
+
         self.init_styles()
         self.create_widgets()
 
@@ -47,16 +66,20 @@ class AdobeHomeApp(Tk):
 
         self.style.configure(
             "Nav.TFrame",
-            background=self.styles.get("main_interface/init_styles/Nav-TFrame"),
+            background=self.styles.get(
+                "main_interface/init_styles/Nav-TFrame", "#141414"
+            ),
         )  # "#141414"
         self.style.configure(
             "UP.TFrame",
-            background=self.styles.get("main_interface/init_styles/UP-TFrame"),
+            background=self.styles.get(
+                "main_interface/init_styles/UP-TFrame", "#383838"
+            ),
         )
 
         self.style.configure(
             "Vertical.TScrollbar",
-            **self.styles.get("main_interface/init_styles/Vertical-TScrollbar"),
+            **(self.styles.get("main_interface/init_styles/Vertical-TScrollbar") or {}),
         )  # Цвет стрелочек внутри кнопок
 
         # Изменение цвета при наведении (hover)
@@ -74,8 +97,10 @@ class AdobeHomeApp(Tk):
 
         self.style.configure(
             "NavFocus.TButton",
-            **self.styles.get("main_interface/init_styles/NavFocus-TButton"),
-            background=self.styles.get("main_interface/init_styles/Nav-TFrame"),
+            **(self.styles.get("main_interface/init_styles/NavFocus-TButton") or {}),
+            background=self.styles.get(
+                "main_interface/init_styles/Nav-TFrame", "#141414"
+            ),
         )
         self.style.map(
             "NavFocus.TButton",
@@ -89,8 +114,10 @@ class AdobeHomeApp(Tk):
 
         self.style.configure(
             "NavFocusOut.TButton",
-            **self.styles.get("main_interface/init_styles/NavFocusOut-TButton"),
-            background=self.styles.get("main_interface/init_styles/Nav-TFrame"),
+            **(self.styles.get("main_interface/init_styles/NavFocusOut-TButton") or {}),
+            background=self.styles.get(
+                "main_interface/init_styles/Nav-TFrame", "#141414"
+            ),
         )
         self.style.map(
             "NavFocusOut.TButton",
@@ -106,7 +133,7 @@ class AdobeHomeApp(Tk):
 
         self.style.configure(
             "ActionOpen.TButton",
-            **self.styles.get("main_interface/init_styles/ActionOpen-TButton"),
+            **(self.styles.get("main_interface/init_styles/ActionOpen-TButton") or {}),
         )
         self.style.map(
             "ActionOpen.TButton",
@@ -121,7 +148,9 @@ class AdobeHomeApp(Tk):
         )
         self.style.configure(
             "ActionCreate.TButton",
-            **self.styles.get("main_interface/init_styles/ActionCreate-TButton"),
+            **(
+                self.styles.get("main_interface/init_styles/ActionCreate-TButton") or {}
+            ),
         )
         self.style.map(
             "ActionCreate.TButton",
@@ -144,7 +173,9 @@ class AdobeHomeApp(Tk):
 
         micon = self.resize_image(
             topbar,
-            background=self.styles.get("main_interface/init_styles/UP-TFrame"),
+            background=self.styles.get(
+                "main_interface/init_styles/UP-TFrame", "#383838"
+            ),
             path="assets/system/icon/favicon-Normal-preview.png",
             size=(150, 150),
         )
@@ -153,8 +184,10 @@ class AdobeHomeApp(Tk):
         welcome_label = Label(
             topbar,
             text="Welcome to Tkinter FrameWork",
-            bg=self.styles.get("main_interface/init_styles/UP-TFrame"),
-            fg=self.styles.get("main_interface/create_widgets/welcome_label"),
+            bg=self.styles.get("main_interface/init_styles/UP-TFrame", "#383838"),
+            fg=self.styles.get(
+                "main_interface/create_widgets/welcome_label", "#ADADAD"
+            ),
             font=("Century Gothic", 16, "bold"),
         )
         welcome_label.pack(expand=True)
@@ -166,24 +199,42 @@ class AdobeHomeApp(Tk):
         # ------------------------------------------------------ Элементы sidebar ------------------------------------------------------
 
         btn_home = ttk.Button(
-            sidebar, text="Home", style="NavFocus.TButton", cursor="hand2"
+            sidebar,
+            text="Home",
+            style="NavFocus.TButton",
+            cursor="hand2",
+            command=lambda: self.open_section("home", btn_home),
         )
         btn_home.pack(fill=X, padx=25, pady=(35, 0), ipady=4, side="top")
 
         btn_utilites = ttk.Button(
-            sidebar, text="Utilites", style="NavFocusOut.TButton", cursor="hand2"
+            sidebar,
+            text="Utilites",
+            style="NavFocusOut.TButton",
+            cursor="hand2",
+            command=lambda: self.open_section("utilites", btn_utilites),
         )
         btn_utilites.pack(fill=X, padx=25, pady=(35, 0), ipady=4, side="top")
 
         btn_styles = ttk.Button(
-            sidebar, text="Styles", style="NavFocusOut.TButton", cursor="hand2"
+            sidebar,
+            text="Styles",
+            style="NavFocusOut.TButton",
+            cursor="hand2",
+            command=lambda: self.open_section("styles", btn_styles),
         )
         btn_styles.pack(fill=X, padx=25, pady=(35, 0), ipady=4, side="top")
 
         btn_settings = ttk.Button(
-            sidebar, text="Settings", style="NavFocusOut.TButton", cursor="hand2"
+            sidebar,
+            text="Settings",
+            style="NavFocusOut.TButton",
+            cursor="hand2",
+            command=lambda: self.open_section("settings", btn_settings),
         )
         btn_settings.pack(fill=X, padx=25, pady=(35, 0), ipady=4, side="top")
+
+        self.sections_btns = [btn_home, btn_utilites, btn_styles, btn_settings]
 
         btn_open = ttk.Button(
             sidebar, text="Open", style="ActionOpen.TButton", cursor="hand2"
@@ -195,13 +246,14 @@ class AdobeHomeApp(Tk):
         btn_create.pack(fill=X, padx=25, pady=(0, 35), ipady=4, side="bottom")
 
         # ------------------------------------------------------ Элементы main_content ------------------------------------------------------
-        self.main_content = Frame(self, bg=self.styles.get("window_color"))
+        win_color = self.styles.get("window_color", "#1e1e1e")
+        self.main_content = Frame(self, bg=win_color)
         self.main_content.pack(side=LEFT, fill=BOTH, expand=True, padx=40, pady=35)
         # ------------------------------------------------------ Элементы main_content ------------------------------------------------------
 
         search_entry = Entry(
             self.main_content,
-            **self.styles.get("main_interface/create_widgets/search_entry"),
+            **(self.styles.get("main_interface/create_widgets/search_entry") or {}),
         )
         search_entry.pack(anchor="ne", ipady=6, padx=10)
         search_entry.insert(0, " Search recent files...")
@@ -217,8 +269,8 @@ class AdobeHomeApp(Tk):
         recent_label = Label(
             self.main_content,
             text="Recent",
-            **self.styles.get("main_interface/create_widgets/recent_label"),
-            bg=self.styles.get("window_color"),
+            **(self.styles.get("main_interface/create_widgets/recent_label") or {}),
+            bg=win_color,
         )
         recent_label.pack(side=TOP, padx=10)
 
@@ -226,7 +278,7 @@ class AdobeHomeApp(Tk):
 
         self.canvas = Canvas(
             self.main_content,
-            bg=self.styles.get("window_color"),
+            bg=win_color,
             bd=0,
             highlightthickness=0,
         )
@@ -240,7 +292,7 @@ class AdobeHomeApp(Tk):
         # Фрейм внутри Canvas, где будут размещаться карточки
         self.grid_frame = Frame(
             self.canvas,
-            bg=self.styles.get("window_color"),
+            bg=win_color,
         )
 
         # Настройка связи Canvas и Scrollbar
@@ -249,10 +301,7 @@ class AdobeHomeApp(Tk):
         )
 
         # Растягиваем внутренний grid_frame по ширине canvas
-        self.canvas.bind(
-            "<Configure>",
-            lambda e: self.canvas.itemconfig(self.canvas_window, width=e.width),
-        )
+        self.canvas.bind("<Configure>", self.on_canvas_configure)
         self.canvas.configure(yscrollcommand=scrollbar.set)
 
         scrollbar.pack(side=RIGHT, fill=Y)
@@ -265,159 +314,74 @@ class AdobeHomeApp(Tk):
         )
 
         # Позволяем прокручивать колесиком мыши
-
         self.canvas.bind_all(
             "<MouseWheel>",
             lambda e: self.canvas.yview_scroll(int(-1 * (e.delta / 120)), "units"),
         )
 
         # Первичная отрисовка карточек
-        self.render_grid()
+        self.open_section("home", btn_home)
 
-    def create_card(self, i, name, fmt, time_ago, columns, card_height, card_width):
-        row = i // columns
-        col = i % columns
+    def on_canvas_configure(self, event):
+        # 1. Растягиваем внутренний фрейм по ширине canvas
+        self.canvas.itemconfig(self.canvas_window, width=event.width)
 
-        # Контейнер карточки (теперь они крупнее)
-        card = Frame(
-            self.grid_frame,
-            **self.styles.get(
-                "main_interface/create_widgets/main_space/card/cardFrame"
-            ),
-        )
-        card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
-        card.configure(height=card_height)
-        card.pack_propagate(False)
-
-        # Миниатюра
-        preview_box = Frame(
-            card,
-            bg=self.styles.get(
-                "main_interface/create_widgets/main_space/card/preview_box/bg"
-            ),
-            height=450,
-        )
-        preview_box.pack(fill=X, padx=10, pady=10)
-        preview_box.pack_propagate(False)
-
-        fmt_label = Label(
-            preview_box,
-            text=fmt,
-            **self.styles.get(
-                "main_interface/create_widgets/main_space/card/preview_box/fmt_label"
-            ),
-            bg=self.styles.get(
-                "main_interface/create_widgets/main_space/card/preview_box/bg"
-            ),
-        )
-        fmt_label.place(relx=0.5, rely=0.5, anchor=CENTER)
-
-        # Метаданные
-        info_frame = Frame(
-            card,
-            bg=self.styles.get(
-                "main_interface/create_widgets/main_space/card/cardFrame/bg"
-            ),
-        )
-        info_frame.pack(fill=X, padx=12, pady=(0, 10))
-
-        lbl_name = Label(
-            info_frame,
-            text=name,
-            bg=self.styles.get(
-                "main_interface/create_widgets/main_space/card/cardFrame/bg"
-            ),
-            **self.styles.get("main_interface/create_widgets/main_space/card/lbl_name"),
-            anchor=W,
-            wraplength=card_width - 30,
-        )
-        lbl_name.pack(fill=X)
-
-        lbl_time = Label(
-            info_frame,
-            text=time_ago,
-            bg=self.styles.get(
-                "main_interface/create_widgets/main_space/card/cardFrame/bg"
-            ),
-            **self.styles.get("main_interface/create_widgets/main_space/card/lbl_time"),
-            anchor=W,
-        )
-        lbl_time.pack(fill=X)
-
-        self.add_hover_effect(
-            card, preview_box, info_frame, lbl_name, lbl_time, fmt_label
-        )
-        print("work")
-
-    def render_grid(self):
+        # 2. Вычисляем новое количество колонок
         card_width = 240
-        card_height = 600
-        canvas_width = self.canvas.winfo_width()
-        if (
-            canvas_width <= 1
-        ):  # Если окно еще не отрисовалось полностью, берем дефолтное значение
-            canvas_width = 900
+        gap = 20
+        raw_cols = event.width // (card_width + gap)
 
-        columns = max(1, canvas_width // (card_width + 20))  # 20 — это отступы (padx)
+        if raw_cols >= 6:
+            new_cols = 6
+        elif raw_cols == 5:
+            new_cols = 5
+        elif raw_cols == 4:
+            new_cols = 4
+        else:
+            new_cols = 3
 
-        # Настраиваем колонки сетки, чтобы они растягивались
-        current_dir = Path(__file__).resolve().parent
-        json_path = current_dir.parent / "data" / "temp.json"
-        json_manager_temp = Temp(json_path)
-        for c in range(columns):
-            self.grid_frame.columnconfigure(c, weight=1, minsize=card_width)
-        projects = json_manager_temp.get("loaded_projects.*") or []
-        for i, project in enumerate(projects):
-            name = project["name"]
-            fmt = project["fmt"]
-            time_ago = project["time"]
-            print(f"time_ago + {time_ago}")
-            self.create_card(i, name, fmt, time_ago, columns, card_height, card_width)
+        # 3. Если количество колонок изменилось, плавно перерисовываем карточки
+        if self.last_cols != new_cols:
+            self.last_cols = new_cols
+            if self._resize_job:
+                self.after_cancel(self._resize_job)
+            self._resize_job = self.after(50, self.render_current_section)
 
-    def add_hover_effect(self, card, preview, info, title, time, fmt):
-        widgets_map = {
-            "card": card,
-            "preview": preview,
-            "info": info,
-            "title": title,
-            "time": time,
-            "fmt": fmt,
-        }
+    def open_section(self, section, section_btn):
+        self.current_section = section
+        self.last_cols = None  # Сбрасываем для принудительной отрисовки
 
-        # Получаем стили для наведения
-        hover_in = (
-            self.styles.get(
-                "main_interface/create_widgets/main_space/card/hover_effect/on_enter"
-            )
-            or {}
-        )
+        # Переключаем подсветку кнопок меню
+        for btn in self.sections_btns:
+            btn.configure(style="NavFocusOut.TButton")
+        section_btn.configure(style="NavFocus.TButton")
 
-        # Автоматически считываем и запоминаем начальные параметры виджетов
-        initial_styles = {}
-        for key, widget in widgets_map.items():
-            if key in hover_in:
-                initial_styles[key] = {
-                    prop: widget.cget(prop) for prop in hover_in[key].keys()
-                }
+        # Отрисовываем выбранную секцию
+        self.render_current_section()
 
-        def on_enter(e):
-            for key, widget in widgets_map.items():
-                if key in hover_in:
-                    widget.configure(**hover_in[key])
+    def render_current_section(self):
+        """Очищает экран и отрисовывает карточки текущей вкладки."""
+        self.clear_screen()
+        if self.current_section == "home":
+            self.section.render_grid(self.grid_frame, self.canvas)
+        elif self.current_section == "styles":
+            self.section.render_styles_grid(self.grid_frame, self.canvas)
 
-        def on_leave(e):
-            for key, widget in widgets_map.items():
-                if key in initial_styles:
-                    widget.configure(**initial_styles[key])
+    def clear_screen(self):
+        # 1. Удаляем все виджеты
+        for widget in self.grid_frame.winfo_children():
+            widget.destroy()
 
-        # Привязываем события ко всем элементам карточки
-        for widget in widgets_map.values():
-            widget.bind("<Enter>", on_enter)
-            widget.bind("<Leave>", on_leave)
+        # 2. Сбрасываем старые колонки сетки (чтобы они не сжимали новые карточки)
+        cols, rows = self.grid_frame.grid_size()
+        for c in range(cols + 10):  # с запасом обнуляем все колонки
+            self.grid_frame.columnconfigure(c, weight=0, minsize=0)
+
+        # 3. Сбрасываем скролл в самый верх
+        self.canvas.yview_moveto(0)
 
     def resize_image(self, parent, background, path="", size=(50, 50)):
         # 1. Открываем изображение (используем исходный модуль PIL.Image)
-        # Если вы импортировали как "from PIL import Image", используйте просто Image.open
         original_img = Image.open(path)
 
         # 2. Изменяем размер
